@@ -37,7 +37,14 @@ export function buildProgram(): Command {
     .action(async () => {
       process.exitCode = await (await import('./commands/status.js')).runStatus();
     });
-  program.command('rules').description('list hints with evidence and state').action(notImplemented('rules'));
+  program
+    .command('rules')
+    .description('list hints with evidence and state')
+    .option('--state <state>', 'only hints in this state (candidate, verified, active, stale, disabled, reverted)')
+    .option('--json', 'machine-readable output')
+    .action(async (opts: { state?: string; json?: boolean }) => {
+      process.exitCode = await (await import('./commands/rules.js')).runRules(opts);
+    });
   program.command('disable').description('stop injection and recording (settings are kept)').action(notImplemented('disable'));
   program.command('enable').description('resume injection and recording').action(notImplemented('enable'));
   program.command('purge').description('delete locally stored data').action(notImplemented('purge'));
