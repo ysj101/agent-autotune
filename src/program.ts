@@ -25,7 +25,12 @@ export function buildProgram(): Command {
     .action(async (opts: { dryRun?: boolean; yes?: boolean; port?: number; launchd: boolean }) => {
       process.exitCode = await (await import('./commands/init.js')).runInit(opts);
     });
-  program.command('doctor').description('diagnose versions, port, Hooks, OTel and DB').action(notImplemented('doctor'));
+  program
+    .command('doctor')
+    .description('diagnose versions, port, Hooks, OTel and DB')
+    .action(async () => {
+      process.exitCode = await (await import('./commands/doctor.js')).runDoctor();
+    });
   program.command('status').description('show state, observations, active hints and effect').action(notImplemented('status'));
   program.command('rules').description('list hints with evidence and state').action(notImplemented('rules'));
   program.command('disable').description('stop injection and recording (settings are kept)').action(notImplemented('disable'));
