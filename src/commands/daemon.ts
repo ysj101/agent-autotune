@@ -1,0 +1,27 @@
+import { readConfig } from '../config/app-config.js';
+import { resolvePaths } from '../config/paths.js';
+import { createDaemon } from '../daemon/server.js';
+import { readToken } from '../security/local-token.js';
+import { openStore } from '../store/sqlite.js';
+
+export async function runDaemon(): Promise<void> {
+  const paths = resolvePaths();
+  const token = readToken(paths);
+  if (!token) {
+    process.stderr.write('agent-autotune daemon: no local token; run `agent-autotune init` first\n');
+    process.exitCode = 1;
+    return;
+  }
+  const store = openStore(paths.dbFile);
+  const daemon = createDaemon({ paths, store, token });
+  const port = await daemon.listen(readConfig(paths).port);
+  process.stderr.write(`agent-autotune daemon listening on 127.0.0.1:${port}\n`);
+  const stop = (): void => {
+    void daemon.close().then(() => {
+      store.close();
+      process.exit(0);
+    });
+  };
+  process.on('SIGTERM', stop);
+  process.on('SIGINT', stop);
+}

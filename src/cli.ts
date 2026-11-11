@@ -24,7 +24,10 @@ export function buildProgram(): Command {
   program.command('enable').description('resume injection and recording').action(notImplemented('enable'));
   program.command('purge').description('delete locally stored data').action(notImplemented('purge'));
   program.command('uninstall').description('remove only what AutoTune added').action(notImplemented('uninstall'));
-  program.command('daemon').description('internal: run the local receiver (started by launchd)').action(notImplemented('daemon'));
+  program
+    .command('daemon')
+    .description('internal: run the local receiver (started by launchd)')
+    .action(async () => (await import('./commands/daemon.js')).runDaemon());
   program
     .command('hook')
     .description('internal: Claude Code hook entry point (reads JSON from stdin)')
