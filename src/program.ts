@@ -64,7 +64,8 @@ export function buildProgram(): Command {
     .description('remove only what AutoTune added (settings entries and the launchd agent)')
     .option('--dry-run', 'show what would be removed')
     .option('-y, --yes', 'remove without asking for confirmation')
-    .action(async (opts: { dryRun?: boolean; yes?: boolean }) => {
+    .option('--no-launchd', 'leave launchd alone')
+    .action(async (opts: { dryRun?: boolean; yes?: boolean; launchd: boolean }) => {
       process.exitCode = await (await import('./commands/uninstall.js')).runUninstall(opts);
     });
   program

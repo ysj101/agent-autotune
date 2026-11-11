@@ -7,6 +7,8 @@ import { confirm, consoleIo, type Io } from './common.js';
 export interface UninstallOptions {
   yes?: boolean;
   dryRun?: boolean;
+  /** false leaves launchd alone (when init ran with --no-launchd). */
+  launchd?: boolean;
 }
 
 export interface UninstallDeps {
@@ -41,7 +43,7 @@ export async function runUninstall(opts: UninstallOptions, deps: UninstallDeps =
   else if (!plan.changed) io.out(`  ${settingsPath}: nothing of AutoTune's left to remove`);
   else for (const r of plan.removed) io.out(`  remove ${r}`);
   for (const k of plan?.kept ?? []) io.out(`  keep   ${k.key} (${k.reason}); review it manually`);
-  io.out('  stop and remove the launchd agent');
+  if (opts.launchd !== false) io.out('  stop and remove the launchd agent');
   if (opts.dryRun) return 0;
 
   if (!opts.yes && !(await deps.confirm('Remove these entries?'))) {
@@ -52,7 +54,7 @@ export async function runUninstall(opts: UninstallOptions, deps: UninstallDeps =
     const backup = writeSettings(settingsPath, plan.next);
     if (backup) io.out(`  backup: ${backup}`);
   }
-  const launchd = uninstallLaunchAgent(paths, deps.run);
+  const launchd = opts.launchd === false ? { ok: true, message: '' } : uninstallLaunchAgent(paths, deps.run);
   if (!launchd.ok) io.err(`uninstall: ${launchd.message}`);
   if (manifest && !plan?.kept.length) rmSync(paths.manifestFile, { force: true });
   io.out('Done. Local data is kept; run `agent-autotune purge` to delete it.');
