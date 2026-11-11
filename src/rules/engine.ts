@@ -1,7 +1,7 @@
-import { readPackageJson, type PackageInfo } from '../project/package-json.js';
+import { readPackageJson, type PackageInfo, type PackageReadResult } from '../project/package-json.js';
 import { newId, nowIso, type Store } from '../store/sqlite.js';
-import { listNpmExecutions } from '../telemetry/correlation.js';
-import { evaluateR001, evidenceFor, RULE_ID } from './r001-npm-script.js';
+import { listNpmExecutions, type Execution } from '../telemetry/correlation.js';
+import { evaluateR001, evidenceFor, RULE_ID, type R001Proposal } from './r001-npm-script.js';
 
 export type HintState = 'candidate' | 'verified' | 'active' | 'stale' | 'disabled' | 'reverted';
 
@@ -20,6 +20,18 @@ export interface HintRow {
   invalidated_reason: string | null;
 }
 
+/** States in which a hint may still progress or be injected. */
+export const LIVE_STATES: ReadonlySet<HintState> = new Set(['candidate', 'verified', 'active']);
+
+export type InvalidationReason =
+  | 'PACKAGE_DELETED'
+  | 'PACKAGE_UNREADABLE'
+  | 'PACKAGE_CHANGED'
+  | 'SCRIPT_REMOVED'
+  | 'FAILED_SCRIPT_ADDED'
+  | 'MULTIPLE_CANDIDATES'
+  | 'CONTRADICTORY_OBSERVATION';
+
 export interface PackageTarget {
   projectId: string;
   projectRoot: string;
@@ -34,7 +46,7 @@ export function transition(store: Store, hint: HintRow, to: HintState, reason: s
 }
 
 export function hintsForPackage(store: Store, packagePath: string): HintRow[] {
-  return store.db.prepare('SELECT * FROM hints WHERE package_path = ? ORDER BY created_at').all(packagePath) as HintRow[];
+  return store.db.prepare('SELECT * FROM hints WHERE package_path = ? ORDER BY created_at, rowid').all(packagePath) as HintRow[];
 }
 
 function upsertCandidate(store: Store, t: PackageTarget, pkg: PackageInfo, failed: string, suggested: string, evidence: string[], at: string): HintRow {
@@ -56,17 +68,59 @@ function upsertCandidate(store: Store, t: PackageTarget, pkg: PackageInfo, faile
   return store.db.prepare('SELECT * FROM hints WHERE id = ?').get(id) as HintRow;
 }
 
+/** Why a hint bound to an older package.json no longer holds, or null if the evidence still matches. */
+export function staleReason(hint: HintRow, read: PackageReadResult): InvalidationReason | null {
+  if (!read.ok) return read.reason === 'not_found' ? 'PACKAGE_DELETED' : 'PACKAGE_UNREADABLE';
+  if (read.pkg.hash === hint.package_hash) return null;
+  if (!read.pkg.scripts.has(hint.suggested_script)) return 'SCRIPT_REMOVED';
+  if (read.pkg.scripts.has(hint.failed_script)) return 'FAILED_SCRIPT_ADDED';
+  return 'PACKAGE_CHANGED';
+}
+
+/** Why an active hint must stop although package.json is unchanged, or null. */
+function activeHintProblem(hint: HintRow, proposals: R001Proposal[], executions: Execution[]): InvalidationReason | null {
+  const contradicted = executions.some(
+    (e) => e.command_name === hint.suggested_script && e.outcome === 'failure' && e.failure_code === 'NPM_MISSING_SCRIPT' && e.package_hash === hint.package_hash,
+  );
+  if (contradicted) return 'CONTRADICTORY_OBSERVATION';
+  const proposal = proposals.find((p) => p.failedScript === hint.failed_script);
+  if (!proposal) return null;
+  const own = proposal.candidates.find((c) => c.script === hint.suggested_script);
+  // The successes that verified this hint were later contradicted (e.g. downgraded to unknown).
+  if (!own || own.successIds.length === 0) return 'CONTRADICTORY_OBSERVATION';
+  if (proposal.verified !== hint.suggested_script) return 'MULTIPLE_CANDIDATES';
+  return null;
+}
+
+/** Terminal state for each problem: stale when the evidence moved, disabled when it was contradicted. */
+function stateFor(reason: InvalidationReason): HintState {
+  if (reason === 'CONTRADICTORY_OBSERVATION') return 'disabled';
+  if (reason === 'MULTIPLE_CANDIDATES') return 'reverted';
+  return 'stale';
+}
+
 /**
  * Re-evaluate R001 for one package.json against everything observed there and apply the state
- * machine: observed → candidate → verified → active. Hints in terminal states are never revived;
- * a changed package.json yields new hint rows (keyed by content hash).
+ * machine: observed → candidate → verified → active, then stale / disabled / reverted as soon as
+ * the evidence no longer holds. Hints in terminal states are never revived; a changed
+ * package.json yields new hint rows (keyed by content hash).
  */
 export function evaluatePackage(store: Store, t: PackageTarget, at: string = nowIso()): void {
   const read = readPackageJson(t.packagePath, t.projectRoot);
-  if (!read.ok) return;
-  const pkg = read.pkg;
-  const proposals = evaluateR001(pkg, listNpmExecutions(store, t.packagePath));
   store.transaction(() => {
+    const live = hintsForPackage(store, t.packagePath).filter((h) => LIVE_STATES.has(h.state));
+    for (const hint of live) {
+      const reason = staleReason(hint, read);
+      if (reason) transition(store, hint, stateFor(reason), reason, at);
+    }
+    if (!read.ok) return;
+    const pkg = read.pkg;
+    const executions = listNpmExecutions(store, t.packagePath);
+    const proposals = evaluateR001(pkg, executions);
+    for (const hint of live.filter((h) => h.state === 'active')) {
+      const reason = activeHintProblem(hint, proposals, executions);
+      if (reason) transition(store, hint, stateFor(reason), reason, at);
+    }
     for (const p of proposals) {
       for (const c of p.candidates) {
         const hint = upsertCandidate(store, t, pkg, p.failedScript, c.script, evidenceFor(p, c.script), at);
@@ -76,4 +130,16 @@ export function evaluatePackage(store: Store, t: PackageTarget, at: string = now
       }
     }
   });
+}
+
+/**
+ * Re-check an active hint against the package.json on disk right before it is injected. A hint
+ * whose evidence no longer matches is invalidated immediately and must not be shown.
+ */
+export function revalidateForInjection(store: Store, hint: HintRow, projectRoot: string, at: string = nowIso()): boolean {
+  if (hint.state !== 'active') return false;
+  const reason = staleReason(hint, readPackageJson(hint.package_path, projectRoot));
+  if (!reason) return true;
+  transition(store, hint, stateFor(reason), reason, at);
+  return false;
 }
