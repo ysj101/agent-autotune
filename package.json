@@ -19,7 +19,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
-    "test:integration": "vitest run tests/integration"
+    "test:integration": "vitest run tests/integration",
+    "bench:hook": "node scripts/bench-hook.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
