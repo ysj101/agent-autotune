@@ -1,6 +1,7 @@
 import { readConfig } from '../config/app-config.js';
 import { resolvePaths } from '../config/paths.js';
 import { createDaemon } from '../daemon/server.js';
+import { buildSessionContext } from '../hooks/session-start.js';
 import { evaluatePackage } from '../rules/engine.js';
 import { readToken } from '../security/local-token.js';
 import { openStore } from '../store/sqlite.js';
@@ -21,6 +22,7 @@ export async function runDaemon(): Promise<void> {
     onToolRecorded: ({ projectId, projectRoot, packagePath }) => {
       if (packagePath) evaluatePackage(store, { projectId, projectRoot, packagePath });
     },
+    sessionStart: (ctx) => buildSessionContext(store, ctx),
   });
   const port = await daemon.listen(readConfig(paths).port);
   process.stderr.write(`agent-autotune daemon listening on 127.0.0.1:${port}\n`);
