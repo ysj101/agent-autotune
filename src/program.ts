@@ -1,13 +1,6 @@
 import { Command } from 'commander';
 import { VERSION } from './version.js';
 
-function notImplemented(name: string): () => void {
-  return () => {
-    process.stderr.write(`agent-autotune ${name}: not implemented yet\n`);
-    process.exitCode = 1;
-  };
-}
-
 export function buildProgram(): Command {
   const program = new Command();
   program
@@ -59,7 +52,13 @@ export function buildProgram(): Command {
     .action(async () => {
       process.exitCode = (await import('./commands/toggle.js')).runSetEnabled(true);
     });
-  program.command('purge').description('delete locally stored data').action(notImplemented('purge'));
+  program
+    .command('purge')
+    .description('delete locally stored data (asks for confirmation)')
+    .option('-y, --yes', 'delete without asking')
+    .action(async (opts: { yes?: boolean }) => {
+      process.exitCode = await (await import('./commands/purge.js')).runPurge(opts);
+    });
   program
     .command('uninstall')
     .description('remove only what AutoTune added (settings entries and the launchd agent)')
