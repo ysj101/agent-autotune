@@ -31,7 +31,14 @@ export function buildProgram(): Command {
   program.command('disable').description('stop injection and recording (settings are kept)').action(notImplemented('disable'));
   program.command('enable').description('resume injection and recording').action(notImplemented('enable'));
   program.command('purge').description('delete locally stored data').action(notImplemented('purge'));
-  program.command('uninstall').description('remove only what AutoTune added').action(notImplemented('uninstall'));
+  program
+    .command('uninstall')
+    .description('remove only what AutoTune added (settings entries and the launchd agent)')
+    .option('--dry-run', 'show what would be removed')
+    .option('-y, --yes', 'remove without asking for confirmation')
+    .action(async (opts: { dryRun?: boolean; yes?: boolean }) => {
+      process.exitCode = await (await import('./commands/uninstall.js')).runUninstall(opts);
+    });
   program
     .command('daemon')
     .description('internal: run the local receiver (started by launchd)')
