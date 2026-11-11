@@ -45,8 +45,20 @@ export function buildProgram(): Command {
     .action(async (opts: { state?: string; json?: boolean }) => {
       process.exitCode = await (await import('./commands/rules.js')).runRules(opts);
     });
-  program.command('disable').description('stop injection and recording (settings are kept)').action(notImplemented('disable'));
-  program.command('enable').description('resume injection and recording').action(notImplemented('enable'));
+  program
+    .command('disable')
+    .description('stop injection and recording (settings are kept)')
+    .option('--rule <id>', 'disable only this hint (id or unique prefix, see `rules`)')
+    .action(async (opts: { rule?: string }) => {
+      const toggle = await import('./commands/toggle.js');
+      process.exitCode = opts.rule ? toggle.runDisableRule(opts.rule) : toggle.runSetEnabled(false);
+    });
+  program
+    .command('enable')
+    .description('resume injection and recording')
+    .action(async () => {
+      process.exitCode = (await import('./commands/toggle.js')).runSetEnabled(true);
+    });
   program.command('purge').description('delete locally stored data').action(notImplemented('purge'));
   program
     .command('uninstall')
