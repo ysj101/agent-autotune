@@ -1,0 +1,42 @@
+{
+  "name": "agent-autotune",
+  "version": "0.1.0",
+  "description": "Learns project-specific tool failures from Claude Code and offers small verified hints in later sessions.",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "bin": {
+    "agent-autotune": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "os": [
+    "darwin"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "commander": "^15.1.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.3": true,
+    "esbuild@0.25.12": true
+  }
+}
