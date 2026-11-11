@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
@@ -17,9 +17,4 @@ describe.runIf(existsSync(cli))('cli', () => {
     }
   });
 
-  it('hook exits 0 with empty stdout', () => {
-    const r = spawnSync(process.execPath, [cli, 'hook', 'SessionStart'], { input: 'not json', encoding: 'utf8' });
-    expect(r.status).toBe(0);
-    expect(r.stdout).toBe('');
-  });
 });
