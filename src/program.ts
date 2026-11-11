@@ -31,7 +31,12 @@ export function buildProgram(): Command {
     .action(async () => {
       process.exitCode = await (await import('./commands/doctor.js')).runDoctor();
     });
-  program.command('status').description('show state, observations, active hints and effect').action(notImplemented('status'));
+  program
+    .command('status')
+    .description('show state, observations, active hints and effect')
+    .action(async () => {
+      process.exitCode = await (await import('./commands/status.js')).runStatus();
+    });
   program.command('rules').description('list hints with evidence and state').action(notImplemented('rules'));
   program.command('disable').description('stop injection and recording (settings are kept)').action(notImplemented('disable'));
   program.command('enable').description('resume injection and recording').action(notImplemented('enable'));
