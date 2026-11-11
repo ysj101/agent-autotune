@@ -17,7 +17,9 @@ export async function runDaemon(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  const store = openStore(paths.dbFile);
+  // better-sqlite3 waits synchronously on locks, so the daemon keeps the wait short: a locked DB
+  // turns into a quick error for one request instead of stalling every hook behind it.
+  const store = openStore(paths.dbFile, { busyTimeoutMs: 250 });
   const retention = (): void => {
     try {
       applyRetention(store);
