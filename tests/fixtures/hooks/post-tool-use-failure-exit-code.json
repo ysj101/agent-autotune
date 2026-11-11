@@ -1,0 +1,20 @@
+{
+  "session_id": "00000000-0000-4000-8000-000000000001",
+  "transcript_path": "/Users/dev/.claude/projects/-Users-dev-work-project-a/transcript.jsonl",
+  "cwd": "/Users/dev/work/project-a",
+  "prompt_id": "00000000-0000-4000-8000-000000000002",
+  "permission_mode": "auto",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "PostToolUseFailure",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "npm run fail",
+    "description": "Run npm fail script"
+  },
+  "tool_use_id": "toolu_fixture0004",
+  "error": "Exit code 3\n\n> capture-proj@1.0.0 fail\n> node -e \"process.exit(3)\"",
+  "is_interrupt": false,
+  "duration_ms": 207
+}

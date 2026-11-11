@@ -1,0 +1,117 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "host.arch",
+            "value": {
+              "stringValue": "arm64"
+            }
+          },
+          {
+            "key": "os.type",
+            "value": {
+              "stringValue": "darwin"
+            }
+          },
+          {
+            "key": "os.version",
+            "value": {
+              "stringValue": "27.2.0"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "claude-code"
+            }
+          },
+          {
+            "key": "service.version",
+            "value": {
+              "stringValue": "2.1.310"
+            }
+          }
+        ],
+        "droppedAttributesCount": 0
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "com.anthropic.claude_code",
+            "version": "2.1.310"
+          },
+          "metrics": [
+            {
+              "name": "claude_code.session.count",
+              "description": "Count of CLI sessions started",
+              "unit": "",
+              "sum": {
+                "aggregationTemporality": 1,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "user.id",
+                        "value": {
+                          "stringValue": "fake-user-id-0000"
+                        }
+                      },
+                      {
+                        "key": "session.id",
+                        "value": {
+                          "stringValue": "00000000-0000-4000-8000-000000000001"
+                        }
+                      },
+                      {
+                        "key": "organization.id",
+                        "value": {
+                          "stringValue": "00000000-0000-4000-8000-000000000002"
+                        }
+                      },
+                      {
+                        "key": "user.email",
+                        "value": {
+                          "stringValue": "dev@example.com"
+                        }
+                      },
+                      {
+                        "key": "user.account_uuid",
+                        "value": {
+                          "stringValue": "00000000-0000-4000-8000-000000000001"
+                        }
+                      },
+                      {
+                        "key": "user.account_id",
+                        "value": {
+                          "stringValue": "user_fake0001"
+                        }
+                      },
+                      {
+                        "key": "terminal.type",
+                        "value": {
+                          "stringValue": "fixture-terminal"
+                        }
+                      },
+                      {
+                        "key": "start_type",
+                        "value": {
+                          "stringValue": "fresh"
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": "1794437231481000000",
+                    "timeUnixNano": "1794437233480000000",
+                    "asDouble": 1
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

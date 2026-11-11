@@ -1,0 +1,20 @@
+{
+  "session_id": "00000000-0000-4000-8000-000000000001",
+  "transcript_path": "/Users/dev/.claude/projects/-Users-dev-work-project-a/transcript.jsonl",
+  "cwd": "/Users/dev/work/project-a",
+  "prompt_id": "00000000-0000-4000-8000-000000000002",
+  "permission_mode": "auto",
+  "effort": {
+    "level": "medium"
+  },
+  "hook_event_name": "PostToolUseFailure",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "npm test",
+    "description": "Run npm test script"
+  },
+  "tool_use_id": "toolu_fixture0003",
+  "error": "Exit code 1\nnpm error Missing script: \"test\"\nnpm error\nnpm error To see a list of scripts, run:\nnpm error   npm run\nnpm error A complete log of this run can be found in: /Users/dev/.npm/_logs/2026-11-11T00_00_00_000Z-debug-0.log",
+  "is_interrupt": false,
+  "duration_ms": 1349
+}
