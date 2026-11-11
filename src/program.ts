@@ -15,7 +15,16 @@ export function buildProgram(): Command {
     .description('Learn project-specific tool failures from Claude Code and offer verified hints.')
     .version(VERSION);
 
-  program.command('init').description('register daemon, OTel and Hooks safely').action(notImplemented('init'));
+  program
+    .command('init')
+    .description('register daemon, OTel and Hooks safely')
+    .option('--dry-run', 'show what would change without changing anything')
+    .option('-y, --yes', 'apply without asking for confirmation')
+    .option('--port <port>', 'preferred receiver port', (v) => Number.parseInt(v, 10))
+    .option('--no-launchd', 'do not register the launchd agent')
+    .action(async (opts: { dryRun?: boolean; yes?: boolean; port?: number; launchd: boolean }) => {
+      process.exitCode = await (await import('./commands/init.js')).runInit(opts);
+    });
   program.command('doctor').description('diagnose versions, port, Hooks, OTel and DB').action(notImplemented('doctor'));
   program.command('status').description('show state, observations, active hints and effect').action(notImplemented('status'));
   program.command('rules').description('list hints with evidence and state').action(notImplemented('rules'));

@@ -18,15 +18,18 @@ export function readToken(paths: Paths): string | null {
   }
 }
 
-/** Return the existing token or create one. The file is always 0600 inside a 0700 directory. */
-export function ensureToken(paths: Paths): string {
+/**
+ * Return the existing token or create one (using `candidate` if given, e.g. the value a plan was
+ * built with). The file is always 0600 inside a 0700 directory.
+ */
+export function ensureToken(paths: Paths, candidate?: string): string {
   ensurePrivateDir(paths.configDir);
   const existing = readToken(paths);
   if (existing) {
     if ((statSync(paths.tokenFile).mode & 0o777) !== 0o600) chmodSync(paths.tokenFile, 0o600);
     return existing;
   }
-  const token = generateToken();
+  const token = candidate && TOKEN_PATTERN.test(candidate) ? candidate : generateToken();
   writeFileSync(paths.tokenFile, `${token}\n`, { mode: 0o600 });
   chmodSync(paths.tokenFile, 0o600);
   return token;
