@@ -4,7 +4,10 @@ import { createDaemon } from '../daemon/server.js';
 import { buildSessionContext } from '../hooks/session-start.js';
 import { evaluatePackage } from '../rules/engine.js';
 import { readToken } from '../security/local-token.js';
+import { applyRetention } from '../store/retention.js';
 import { openStore } from '../store/sqlite.js';
+
+const RETENTION_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 export async function runDaemon(): Promise<void> {
   const paths = resolvePaths();
@@ -15,6 +18,15 @@ export async function runDaemon(): Promise<void> {
     return;
   }
   const store = openStore(paths.dbFile);
+  const retention = (): void => {
+    try {
+      applyRetention(store);
+    } catch {
+      store.incrementDiagnostic('daemon.retention_error');
+    }
+  };
+  retention();
+  setInterval(retention, RETENTION_INTERVAL_MS).unref();
   const daemon = createDaemon({
     paths,
     store,
