@@ -20,6 +20,8 @@ export interface HintRow {
   invalidated_reason: string | null;
 }
 
+const MAX_EVIDENCE_IDS = 40;
+
 /** States in which a hint may still progress or be injected. */
 export const LIVE_STATES: ReadonlySet<HintState> = new Set(['candidate', 'verified', 'active']);
 
@@ -54,7 +56,11 @@ function upsertCandidate(store: Store, t: PackageTarget, pkg: PackageInfo, faile
     .prepare('SELECT * FROM hints WHERE project_id = ? AND package_path = ? AND failed_script = ? AND suggested_script = ? AND package_hash = ?')
     .get(t.projectId, t.packagePath, failed, suggested, pkg.hash) as HintRow | undefined;
   if (existing) {
-    store.db.prepare('UPDATE hints SET evidence_event_ids_json = ? WHERE id = ?').run(JSON.stringify(evidence), existing.id);
+    // Keep earlier evidence ids: events may age out of retention, but the record of why a hint
+    // was created should not shrink.
+    const merged = [...new Set([...parseIds(existing.evidence_event_ids_json), ...evidence])].slice(-MAX_EVIDENCE_IDS);
+    store.db.prepare('UPDATE hints SET evidence_event_ids_json = ? WHERE id = ?').run(JSON.stringify(merged), existing.id);
+    existing.evidence_event_ids_json = JSON.stringify(merged);
     return existing;
   }
   const id = newId();
@@ -86,10 +92,27 @@ function activeHintProblem(hint: HintRow, proposals: R001Proposal[], executions:
   const proposal = proposals.find((p) => p.failedScript === hint.failed_script);
   if (!proposal) return null;
   const own = proposal.candidates.find((c) => c.script === hint.suggested_script);
-  // The successes that verified this hint were later contradicted (e.g. downgraded to unknown).
-  if (!own || own.successIds.length === 0) return 'CONTRADICTORY_OBSERVATION';
+  if (!own || own.successIds.length === 0) {
+    // The successes that verified this hint are still stored but no longer count as success
+    // (e.g. downgraded to unknown by a Hook/OTel conflict): the evidence was contradicted.
+    const evidence = new Set(parseIds(hint.evidence_event_ids_json));
+    if (executions.some((e) => evidence.has(e.id) && e.command_name === hint.suggested_script && e.outcome !== 'success')) {
+      return 'CONTRADICTORY_OBSERVATION';
+    }
+    // Otherwise the evidence merely aged out of retention; that alone is no reason to stop.
+    return proposal.verified && proposal.verified !== hint.suggested_script ? 'MULTIPLE_CANDIDATES' : null;
+  }
   if (proposal.verified !== hint.suggested_script) return 'MULTIPLE_CANDIDATES';
   return null;
+}
+
+function parseIds(json: string): string[] {
+  try {
+    const v: unknown = JSON.parse(json);
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Terminal state for each problem: stale when the evidence moved, disabled when it was contradicted. */
